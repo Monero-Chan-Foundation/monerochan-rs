@@ -1,5 +1,5 @@
 [workspace.package]
-version = "5.2.9"
+version = "5.2.10"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/monero-chan-foundation/monerochan-rs"
@@ -49,27 +49,27 @@ debug-assertions = true
 
 [workspace.dependencies]
 # monerochan
-monerochan-build = { path = "crates/build", version = "5.2.9" }
-monerochan-cli = { path = "crates/cli", version = "5.2.9", default-features = false }
-monerochan-core-machine = { path = "crates/core/machine", version = "5.2.9", default-features = false }
-monerochan-core-executor = { path = "crates/core/executor", version = "5.2.9" }
-monerochan-curves = { path = "crates/curves", version = "5.2.9" }
-monerochan-derive = { path = "crates/derive", version = "5.2.9" }
-monerochan-eval = { path = "crates/eval", version = "5.2.9" }
-monerochan-helper = { path = "crates/helper", version = "5.2.9", default-features = false }
-monerochan-primitives = { path = "crates/primitives", version = "5.2.9" }
-monerochan-prover = { path = "crates/prover", version = "5.2.9" }
-monerochan-recursion-compiler = { path = "crates/recursion/compiler", version = "5.2.9" }
-monerochan-recursion-core = { path = "crates/recursion/core", version = "5.2.9", default-features = false }
-monerochan-recursion-derive = { path = "crates/recursion/derive", version = "5.2.9", default-features = false }
-monerochan-recursion-gnark-ffi = { path = "crates/recursion/gnark-ffi", version = "5.2.9", default-features = false }
-monerochan-recursion-circuit = { path = "crates/recursion/circuit", version = "5.2.9", default-features = false }
-monerochan = { path = "crates/sdk", version = "5.2.9" }
-monerochan-cuda = { path = "crates/cuda", version = "5.2.9" }
-monerochan-stark = { path = "crates/stark", version = "5.2.9" }
-monerochan-lib = { path = "crates/zkvm/lib", version = "5.2.9", default-features = false }
-monerochan-runtime = { path = "crates/zkvm/entrypoint", version = "5.2.9", default-features = false }
-monerochan-verifier = { path = "crates/verifier", version = "5.2.9", default-features = false }
+monerochan-build = { path = "crates/build", version = "5.2.10" }
+monerochan-cli = { path = "crates/cli", version = "5.2.10", default-features = false }
+monerochan-core-machine = { path = "crates/core/machine", version = "5.2.10", default-features = false }
+monerochan-core-executor = { path = "crates/core/executor", version = "5.2.10" }
+monerochan-curves = { path = "crates/curves", version = "5.2.10" }
+monerochan-derive = { path = "crates/derive", version = "5.2.10" }
+monerochan-eval = { path = "crates/eval", version = "5.2.10" }
+monerochan-helper = { path = "crates/helper", version = "5.2.10", default-features = false }
+monerochan-primitives = { path = "crates/primitives", version = "5.2.10" }
+monerochan-prover = { path = "crates/prover", version = "5.2.10" }
+monerochan-recursion-compiler = { path = "crates/recursion/compiler", version = "5.2.10" }
+monerochan-recursion-core = { path = "crates/recursion/core", version = "5.2.10", default-features = false }
+monerochan-recursion-derive = { path = "crates/recursion/derive", version = "5.2.10", default-features = false }
+monerochan-recursion-gnark-ffi = { path = "crates/recursion/gnark-ffi", version = "5.2.10", default-features = false }
+monerochan-recursion-circuit = { path = "crates/recursion/circuit", version = "5.2.10", default-features = false }
+monerochan = { path = "crates/sdk", version = "5.2.10" }
+monerochan-cuda = { path = "crates/cuda", version = "5.2.10" }
+monerochan-stark = { path = "crates/stark", version = "5.2.10" }
+monerochan-lib = { path = "crates/zkvm/lib", version = "5.2.10", default-features = false }
+monerochan-runtime = { path = "crates/zkvm/entrypoint", version = "5.2.10", default-features = false }
+monerochan-verifier = { path = "crates/verifier", version = "5.2.10", default-features = false }
 
 # For testing.
 test-artifacts = { path = "crates/test-artifacts" }

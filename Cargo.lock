@@ -4568,7 +4568,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "alloy-primitives",
  "alloy-signer",
@@ -4626,7 +4626,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-build"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "anyhow",
  "cargo_metadata",
@@ -4638,7 +4638,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-cli"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "anstyle",
  "anyhow",
@@ -4667,7 +4667,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-core-executor"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "bincode",
  "bytemuck",
@@ -4710,7 +4710,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-core-machine"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "bincode",
  "cbindgen",
@@ -4768,7 +4768,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-cuda"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "bincode",
  "ctrlc",
@@ -4786,7 +4786,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-curves"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "cfg-if",
  "dashu",
@@ -4808,7 +4808,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-derive"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "quote",
  "syn 1.0.109",
@@ -4816,7 +4816,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-eval"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "anyhow",
  "bincode",
@@ -4834,14 +4834,14 @@ dependencies = [
 
 [[package]]
 name = "monerochan-helper"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "monerochan-build",
 ]
 
 [[package]]
 name = "monerochan-lib"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "bincode",
  "elliptic-curve",
@@ -4851,7 +4851,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-perf"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "bincode",
  "clap",
@@ -4871,7 +4871,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-primitives"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "bincode",
  "blake3",
@@ -4889,7 +4889,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-prover"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "anyhow",
  "bincode",
@@ -4932,7 +4932,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-recursion-circuit"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "ff 0.13.1",
  "hashbrown 0.14.5",
@@ -4970,7 +4970,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-recursion-compiler"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "backtrace",
  "criterion",
@@ -4995,7 +4995,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-recursion-core"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "backtrace",
  "cbindgen",
@@ -5038,7 +5038,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-recursion-derive"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "quote",
  "syn 1.0.109",
@@ -5046,7 +5046,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-recursion-gnark-cli"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "bincode",
  "clap",
@@ -5055,7 +5055,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-recursion-gnark-ffi"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "anyhow",
  "bincode",
@@ -5079,7 +5079,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-runtime"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "blake3",
  "cfg-if",
@@ -5099,7 +5099,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-stark"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "arrayref",
  "hashbrown 0.14.5",
@@ -5132,7 +5132,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-verifier"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "ark-bn254",
  "ark-ec",
@@ -7909,7 +7909,7 @@ dependencies = [
 
 [[package]]
 name = "test-artifacts"
-version = "5.2.9"
+version = "5.2.10"
 dependencies = [
  "monerochan-build",
 ]
