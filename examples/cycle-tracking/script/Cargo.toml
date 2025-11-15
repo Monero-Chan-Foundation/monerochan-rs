@@ -1,0 +1,11 @@
+[package]
+name = "cycle-tracking-script"
+version = { workspace = true }
+edition = { workspace = true }
+publish = false
+
+[dependencies]
+monerochan = { workspace = true }
+
+[build-dependencies]
+monerochan-build = { workspace = true }

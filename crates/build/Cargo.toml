@@ -1,0 +1,25 @@
+[package]
+name = "monerochan-build"
+description = "Build an MONEROCHAN program."
+readme = "README.md"
+
+# Note: The release workflow depends on `monerochan-build` version being set by the workspace, and that the `monerochan-build` version refers to the canonical version.
+# **Do not change this**, unless the release workflow is changed accordingly.
+#
+# The version of `monerochan-build` is used for:
+# - The name of the release tag on merge to `main`.
+# - The default Docker image tag for this MONEROCHAN version..
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+
+[dependencies]
+monerochan-prover = { workspace = true }
+cargo_metadata = "0.18.1"
+anyhow = { version = "1.0.83" }
+clap = { version = "4.5.9", features = ["derive", "env"] }
+dirs = "5.0.1"
+chrono = { version = "0.4.38", default-features = false, features = ["clock"] }

@@ -1,0 +1,16 @@
+[package]
+name = "monerochan-helper"
+description = "Crate for building MONEROCHAN programs with build scripts."
+readme = "../../README.md"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+
+[package.metadata]
+deprecated = "This crate is deprecated. Please use monerochan_build instead."
+
+[dependencies]
+monerochan-build = { workspace = true }

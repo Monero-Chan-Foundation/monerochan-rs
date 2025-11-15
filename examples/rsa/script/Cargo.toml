@@ -1,0 +1,12 @@
+[package]
+name = "rsa-script"
+version = { workspace = true }
+edition = { workspace = true }
+publish = false
+
+[dependencies]
+rsa = "0.6"
+monerochan = { workspace = true }
+
+[build-dependencies]
+monerochan-build = { workspace = true }

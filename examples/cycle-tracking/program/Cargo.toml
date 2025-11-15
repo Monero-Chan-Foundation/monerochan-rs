@@ -1,0 +1,17 @@
+[package]
+name = "cycle-tracking-program"
+version = "1.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "normal"
+path = "bin/normal.rs"
+
+[[bin]]
+name = "report"
+path = "bin/report.rs"
+
+[dependencies]
+monerochan-runtime = { path = "../../../crates/zkvm/entrypoint" }
+monerochan-derive = { path = "../../../crates/derive" }

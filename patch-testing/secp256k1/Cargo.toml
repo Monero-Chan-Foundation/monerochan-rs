@@ -1,0 +1,21 @@
+[package]
+name = "secp256k1-program"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+monerochan = { workspace = true }
+monerochan-core-executor = { workspace = true }
+secp256k1 = { workspace = true }
+rand = { workspace = true }
+monerochan-test = { workspace = true }
+
+[features]
+prove = []
+gpu = ["monerochan/cuda"]
+
+
+[build-dependencies]
+monerochan-build = { workspace = true }
+

@@ -1,0 +1,122 @@
+[workspace.package]
+version = "5.2.9"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/monero-chan-foundation/monerochan-rs"
+keywords = ["monerochan", "privacy", "runtime", "ospp", "riscv"]
+categories = ["cryptography"]
+
+include = ["MONEROCHAN_VERSION"]
+
+[workspace]
+members = [
+  "crates/build",
+  "crates/cli",
+  "crates/core/executor",
+  "crates/core/machine",
+  "crates/curves",
+  "crates/derive",
+  "crates/eval",
+  "crates/helper",
+  "crates/perf",
+  "crates/prover",
+  "crates/recursion/circuit",
+  "crates/recursion/compiler",
+  "crates/recursion/core",
+  "crates/recursion/derive",
+  "crates/recursion/gnark-cli",
+  "crates/recursion/gnark-ffi",
+  "crates/sdk",
+  "crates/cuda",
+  "crates/verifier",
+  "crates/stark",
+  "crates/zkvm/*",
+  "crates/test-artifacts",
+]
+exclude = ["examples/target"]
+resolver = "2"
+
+[profile.release]
+opt-level = 3
+
+[profile.bench]
+opt-level = 3
+
+[profile.fast]
+inherits = "release"
+debug = true
+debug-assertions = true
+
+[workspace.dependencies]
+# monerochan
+monerochan-build = { path = "crates/build", version = "5.2.8" }
+monerochan-cli = { path = "crates/cli", version = "5.2.8", default-features = false }
+monerochan-core-machine = { path = "crates/core/machine", version = "5.2.8", default-features = false }
+monerochan-core-executor = { path = "crates/core/executor", version = "5.2.8" }
+monerochan-curves = { path = "crates/curves", version = "5.2.8" }
+monerochan-derive = { path = "crates/derive", version = "5.2.8" }
+monerochan-eval = { path = "crates/eval", version = "5.2.8" }
+monerochan-helper = { path = "crates/helper", version = "5.2.8", default-features = false }
+monerochan-primitives = { path = "crates/primitives", version = "5.2.8" }
+monerochan-prover = { path = "crates/prover", version = "5.2.8" }
+monerochan-recursion-compiler = { path = "crates/recursion/compiler", version = "5.2.8" }
+monerochan-recursion-core = { path = "crates/recursion/core", version = "5.2.8", default-features = false }
+monerochan-recursion-derive = { path = "crates/recursion/derive", version = "5.2.8", default-features = false }
+monerochan-recursion-gnark-ffi = { path = "crates/recursion/gnark-ffi", version = "5.2.8", default-features = false }
+monerochan-recursion-circuit = { path = "crates/recursion/circuit", version = "5.2.8", default-features = false }
+monerochan = { path = "crates/sdk", version = "5.2.8" }
+monerochan-cuda = { path = "crates/cuda", version = "5.2.8" }
+monerochan-stark = { path = "crates/stark", version = "5.2.8" }
+monerochan-lib = { path = "crates/zkvm/lib", version = "5.2.8", default-features = false }
+monerochan-runtime = { path = "crates/zkvm/entrypoint", version = "5.2.8", default-features = false }
+monerochan-verifier = { path = "crates/verifier", version = "5.2.8", default-features = false }
+
+# For testing.
+test-artifacts = { path = "crates/test-artifacts" }
+
+# p3
+p3-field = { version = "=0.2.3-succinct" }
+p3-air = { version = "=0.2.3-succinct" }
+p3-baby-bear = { version = "=0.2.3-succinct" }
+p3-bn254-fr = { version = "=0.2.3-succinct" }
+p3-poseidon2 = { version = "=0.2.3-succinct" }
+p3-symmetric = { version = "=0.2.3-succinct" }
+p3-dft = { version = "=0.2.3-succinct" }
+p3-matrix = { version = "=0.2.3-succinct" }
+p3-merkle-tree = { version = "=0.2.3-succinct" }
+p3-commit = { version = "=0.2.3-succinct" }
+p3-fri = { version = "=0.2.3-succinct" }
+p3-challenger = { version = "=0.2.3-succinct" }
+p3-util = { version = "=0.2.3-succinct" }
+p3-interpolation = { version = "=0.2.3-succinct" }
+p3-uni-stark = { version = "=0.2.3-succinct" }
+p3-goldilocks = { version = "=0.2.3-succinct" }
+p3-keccak = { version = "=0.2.3-succinct" }
+p3-keccak-air = { version = "=0.2.3-succinct" }
+p3-blake3 = { version = "=0.2.3-succinct" }
+p3-mds = { version = "=0.2.3-succinct" }
+p3-maybe-rayon = { version = "=0.2.3-succinct" }
+
+# misc
+hashbrown = "0.14.5"
+itertools = "0.13.0"
+serde = "1.0.204"
+serde_json = "1.0.132"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.20"
+blake3 = { version = "1.6.1", default-features = false }
+
+[workspace.metadata.typos]
+default.extend-ignore-re = [
+  "Jo-Philipp Wich",
+  "SubEIN",
+  "DivEIN",
+  "CommitCommitedValuesDigest",
+]
+default.extend-ignore-words-re = ["(?i)groth", "TRE"]
+
+[workspace.lints.clippy]
+print_stdout = "deny"
+
+[patch.crates-io]
+monerochan-lib = { path = "crates/zkvm/lib" }

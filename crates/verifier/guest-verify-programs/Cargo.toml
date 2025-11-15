@@ -1,0 +1,42 @@
+[workspace]
+[package]
+name = "guest-verify-programs"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "groth16_verify"
+path = "src/groth16_verify.rs"
+
+[[bin]]
+name = "groth16_verify_blake3"
+path = "src/groth16_verify.rs"
+required-features = ["blake3"]
+
+[[bin]]
+name = "groth16_verify_compressed"
+path = "src/groth16_verify_compressed.rs"
+
+[[bin]]
+name = "groth16_verify_compressed_blake3"
+path = "src/groth16_verify_compressed.rs"
+required-features = ["blake3"]
+
+[[bin]]
+name = "plonk_verify"
+path = "src/plonk_verify.rs"
+
+[[bin]]
+name = "plonk_verify_blake3"
+path = "src/plonk_verify.rs"
+required-features = ["blake3"]
+
+[dependencies]
+monerochan-runtime = { path = "../../zkvm/entrypoint" }
+monerochan-verifier = { path = "../" }
+
+[features]
+blake3 = ["monerochan-runtime/blake3"]
+
+[patch.crates-io]
+monerochan-lib = { path = "../../zkvm/lib" }

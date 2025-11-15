@@ -1,0 +1,45 @@
+[package]
+name = "monerochan-recursion-compiler"
+description = "Monero-Chan, The Open-Source Privacy Platform (OSPP)"
+readme = "../../../README.md"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+
+[dependencies]
+p3-bn254-fr = { workspace = true }
+p3-baby-bear = { workspace = true }
+p3-field = { workspace = true }
+p3-symmetric = { workspace = true }
+
+monerochan-core-machine = { workspace = true, default-features = true }
+monerochan-primitives = { workspace = true }
+monerochan-recursion-core = { workspace = true, default-features = true }
+monerochan-recursion-derive = { workspace = true }
+monerochan-stark = { workspace = true }
+
+itertools = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+backtrace = { version = "0.3.71", optional = true }
+tracing = { workspace = true }
+vec_map = "0.8.2"
+
+[dev-dependencies]
+monerochan-recursion-core = { path = "../core", default-features = true, features = [
+    "program_validation",
+] }
+p3-challenger = { workspace = true }
+p3-dft = { workspace = true }
+p3-merkle-tree = { workspace = true }
+rand = "0.8.5"
+criterion = { version = "0.5.1", features = ["html_reports"] }
+
+[features]
+default = ["debug"]
+debug = ["monerochan-recursion-core/debug", "dep:backtrace"]
+
+[lints]
+workspace = true

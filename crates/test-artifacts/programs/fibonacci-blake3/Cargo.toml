@@ -1,0 +1,11 @@
+# Because of the `blake3` feature enabled on `monerochan-runtime`, this program should be in its own 
+# workspace. Otherwise, it changes PV hashing for all programs to `blake3`.
+[workspace]
+[package]
+name = "fibonacci-blake3-test"
+version = "1.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+monerochan-runtime = { path = "../../../../crates/zkvm/entrypoint", features = ["blake3"]}

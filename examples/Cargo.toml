@@ -1,0 +1,76 @@
+[workspace]
+members = [
+  "aggregation/program",
+  "aggregation/script",
+  "bls12381/program",
+  "bls12381/script",
+  "bn254/program",
+  "bn254/script",
+  "chess/program",
+  "chess/script",
+  "cycle-tracking/program",
+  "cycle-tracking/script",
+  "fibonacci/program",
+  "fibonacci/script",
+  "groth16/program",
+  "groth16/script",
+  "io/program",
+  "io/script",
+  "is-prime/program",
+  "is-prime/script",
+  "json/lib",
+  "json/program",
+  "json/script",
+  "regex/program",
+  "regex/script",
+  "rsa/program",
+  "rsa/script",
+  "ssz-withdrawals/program",
+  "ssz-withdrawals/script",
+  "tendermint/program",
+  "tendermint/script",
+]
+resolver = "2"
+
+[workspace.package]
+version = "1.1.0"
+edition = "2021"
+
+[workspace.dependencies]
+monerochan-build = { path = "../crates/build" }
+monerochan-derive = { path = "../crates/derive" }
+monerochan-core-executor = { path = "../crates/core/executor" }
+monerochan-core-machine = { path = "../crates/core/machine" }
+monerochan-cli = { path = "../crates/cli", default-features = false }
+monerochan-eval = { path = "../crates/eval", default-features = false }
+monerochan-helper = { path = "../crates/helper", default-features = false }
+monerochan-primitives = { path = "../crates/primitives" }
+monerochan-prover = { path = "../crates/prover" }
+monerochan-recursion-compiler = { path = "../crates/recursion/compiler" }
+monerochan-recursion-core = { path = "../crates/recursion/core", default-features = true }
+monerochan-recursion-derive = { path = "../crates/recursion/derive", default-features = false }
+monerochan-recursion-gnark-ffi = { path = "../crates/recursion/gnark-ffi", default-features = false }
+monerochan-recursion-program = { path = "../crates/recursion/program", default-features = false }
+monerochan-recursion-circuit = { path = "../crates/recursion/circuit", default-features = false }
+monerochan = { path = "../crates/sdk" }
+monerochan-lib = { path = "../crates/zkvm/lib", default-features = false }
+monerochan-runtime = { path = "../crates/zkvm/entrypoint", default-features = false }
+
+# misc
+serde = "1.0.204"
+serde_json = "1.0.132"
+tracing = "0.1.40"
+
+[patch.crates-io]
+curve25519-dalek = { git = "https://github.com/sp1-patches/curve25519-dalek", tag = "patch-4.1.3-sp1-5.0.0" }
+curve25519-dalek-ng = { git = "https://github.com/sp1-patches/curve25519-dalek-ng", tag = "patch-4.1.1-sp1-5.0.0" }
+secp256k1 = { git = "https://github.com/sp1-patches/rust-secp256k1", tag = "patch-0.29.1-sp1-5.0.0" }
+sha2-v0-10-8 = { git = "https://github.com/sp1-patches/RustCrypto-hashes", package = "sha2", tag = "patch-sha2-0.10.8-sp1-4.0.0" }
+sha2-v0-10-6 = { git = "https://github.com/sp1-patches/RustCrypto-hashes", package = "sha2", tag = "patch-sha2-0.10.6-sp1-4.0.0" }
+sha2-v0-9-9 = { git = "https://github.com/sp1-patches/RustCrypto-hashes", package = "sha2", tag = "patch-sha2-0.9.9-sp1-4.0.0" }
+tiny-keccak = { git = "https://github.com/sp1-patches/tiny-keccak", tag = "patch-2.0.2-sp1-4.0.0" }
+substrate-bn = { git = "https://github.com/sp1-patches/bn", tag = "patch-0.6.0-sp1-5.0.0" }
+bls12_381 = { git = "https://github.com/sp1-patches/bls12_381", tag = "patch-0.8.0-sp1-5.0.0" }
+
+# todo!(n) remove
+monerochan-lib = { path = "../crates/zkvm/lib" }

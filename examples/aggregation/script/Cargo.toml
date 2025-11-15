@@ -1,0 +1,12 @@
+[package]
+name = "aggregation-script"
+version = { workspace = true }
+edition = { workspace = true }
+publish = false
+
+[dependencies]
+monerochan = { workspace = true }
+tracing = { workspace = true }
+
+[build-dependencies]
+monerochan-build = { workspace = true }

@@ -1,0 +1,63 @@
+[package]
+name = "monerochan-recursion-circuit"
+description = "Monero-Chan, The Open-Source Privacy Platform (OSPP)"
+readme = "../../../README.md"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+
+[dependencies]
+p3-air = { workspace = true }
+p3-field = { workspace = true }
+p3-commit = { workspace = true }
+p3-fri = { workspace = true }
+p3-matrix = { workspace = true }
+p3-util = { workspace = true }
+p3-symmetric = { workspace = true }
+p3-challenger = { workspace = true }
+p3-dft = { workspace = true }
+p3-bn254-fr = { workspace = true }
+p3-baby-bear = { workspace = true }
+p3-uni-stark = { workspace = true }
+
+monerochan-core-machine = { workspace = true, default-features = true }
+monerochan-core-executor = { workspace = true }
+monerochan-stark = { workspace = true }
+monerochan-derive = { workspace = true }
+monerochan-recursion-core = { workspace = true, default-features = true }
+monerochan-recursion-compiler = { workspace = true }
+monerochan-primitives = { workspace = true }
+monerochan-recursion-gnark-ffi = { workspace = true }
+
+itertools = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+rand = "0.8.5"
+tracing = { workspace = true }
+hashbrown = { workspace = true, features = ["serde", "inline-more"] }
+num-traits = "0.2.19"
+rayon = "1.10.0"
+
+[dev-dependencies]
+monerochan-core-executor = { path = "../../core/executor" }
+monerochan-recursion-core = { path = "../core", default-features = true, features = [
+    "program_validation",
+] }
+ff = { version = "0.13", features = ["derive", "derive_bits"] }
+p3-challenger = { workspace = true }
+p3-symmetric = { workspace = true }
+p3-dft = { workspace = true }
+p3-merkle-tree = { workspace = true }
+p3-poseidon2 = { workspace = true }
+zkhash = "0.2.0"
+rand = "0.8.5"
+test-artifacts = { path = "../../test-artifacts" }
+
+[features]
+native-gnark = ["monerochan-recursion-gnark-ffi/native"]
+debug = ["monerochan-core-machine/debug", "monerochan-recursion-compiler/debug"]
+
+[lints]
+workspace = true

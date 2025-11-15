@@ -1,0 +1,11 @@
+[package]
+version = "0.1.0"
+name = "bn254-script"
+edition = "2021"
+
+[dependencies]
+monerochan = { path = "../../../crates/sdk" }
+
+
+[build-dependencies]
+monerochan-build = { path = "../../../crates/build" }

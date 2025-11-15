@@ -1,0 +1,25 @@
+[package]
+name = "bls12_381_tests"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+monerochan-runtime = { workspace = true }
+monerochan = { workspace = true }
+monerochan-core-executor = { workspace = true }
+rand.workspace = true
+monerochan-test = { workspace = true }
+
+# note: we use the patched version (which should be mostly equivalent to the original, outside the vm)
+# because we want to test the field ops which are not exposed in the original
+bls12_381 = { git = "https://github.com/sp1-patches/bls12_381", tag = "patch-0.8.0-monerochan-5.0.0", features = ["groups"] }
+group = "0.13.0"
+
+[features]
+prove = []
+gpu = ["monerochan/cuda"]
+
+
+[build-dependencies]
+monerochan-build = { workspace = true }

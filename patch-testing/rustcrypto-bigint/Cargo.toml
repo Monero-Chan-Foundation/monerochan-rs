@@ -1,0 +1,20 @@
+[package]
+name = "rustcrypto-bigint"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+monerochan-runtime = { workspace = true }
+monerochan = { workspace = true }
+monerochan-core-executor = { workspace = true }
+rand = { workspace = true }
+monerochan-test = { workspace = true }
+crypto-bigint = "0.5.5"
+
+[features]
+prove = []
+gpu = ["monerochan/cuda"]
+
+[build-dependencies]
+monerochan-build = { workspace = true }

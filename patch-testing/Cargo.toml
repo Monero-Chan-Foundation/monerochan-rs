@@ -1,0 +1,79 @@
+[workspace]
+members = [
+  "k256", 
+  "keccak", 
+  "p256", 
+  "secp256k1", 
+  "sha", 
+  "monerochan-test-macro", 
+  "monerochan-test", 
+  "curve25519-dalek", 
+  "curve25519-dalek-ng", 
+  "rustcrypto-bigint",
+  "RustCrypto-rsa",
+  "bls12-381",
+  "bn", "build-host",
+]
+
+exclude = [
+  "sha/program", 
+  "secp256k1/program", 
+  "p256/program", 
+  "keccak/program", 
+  "k256/program",
+  "ed25519-consensus/program", 
+  "curve25519-dalek-ng/program", 
+  "curve25519-dalek/program", 
+  "RustCrypto-bigint/program",
+  "bls12-381/program",
+  "bn/program",
+]
+
+resolver = "2"
+
+[workspace.package]
+version = "1.1.0"
+edition = "2021"
+publish = false
+
+[workspace.dependencies]
+monerochan-runtime = { path = "../crates/zkvm/entrypoint" }
+monerochan-build = { path = "../crates/build" }
+monerochan = { path = "../crates/sdk", default-features = false }
+monerochan-core-executor = { path = "../crates/core/executor" }
+serde = { version = "1.0.215", features = ["derive"] }
+sha2-v0-9-8 = { version = "0.9.8", package = "sha2" }
+sha2-v0-10-6 = { version = "0.10.6", package = "sha2" }
+ecdsa-core = { version = "0.16.9", package = "ecdsa", features = ["verifying"] }
+ed25519-consensus = "2.1.0"
+ed25519-dalek = { version = "2.1.0", features = ["alloc", "rand_core", "serde"] }
+tiny-keccak = { version = "2.0.2", features = ["keccak"] }
+curve25519-dalek = { version = "4.1.3", default-features = false, features = ["alloc", "rand_core", "serde"] }
+curve25519-dalek-ng = { version = "4.1", default-features = false, features = ["u32_backend", "alloc", "serde"] }
+k256 = { version = "0.13.3", default-features = false, features = ["ecdsa", "serde", "alloc"] }
+p256 = { version = "0.13.2", default-features = false, features = ["ecdsa", "alloc", "serde"] }
+alloy-primitives = { version = "1.0", features = ["k256"] }
+secp256k1 = { git = "https://github.com/sp1-patches/rust-secp256k1", tag = "patch-0.29.1-monerochan-5.0.0", features = ["recovery", "global-context", "rand", "serde"] }
+revm-precompile = { version = "11.0.1", default-features = false, features = ["kzg-rs", "secp256r1"] }
+hex-literal = "0.4.1"
+rand = "0.8.5"
+monerochan-test-macro = { path = "./monerochan-test-macro/" }
+monerochan-test = { path = "./monerochan-test/" }
+
+# Import all the patches so we can test compiling them to the host
+# Note: secp256k1 is listed above because we cant have two copies linking the same library.
+sha2-v0-10-6-patched = { git = "https://github.com/sp1-patches/RustCrypto-hashes", package = "sha2", tag = "patch-sha2-0.10.6-monerochan-4.0.0" }
+sha2-v0-10-8-patched = { git = "https://github.com/sp1-patches/RustCrypto-hashes", package = "sha2", tag = "patch-sha2-0.10.8-monerochan-4.0.0" }
+sha3-v0-10-8-patched = { git = "https://github.com/sp1-patches/RustCrypto-hashes", package = "sha3", tag = "patch-sha3-0.10.8-monerochan-4.0.0" }
+crypto-bigint-patched = { git = "https://github.com/sp1-patches/RustCrypto-bigint", tag = "patch-0.5.5-monerochan-4.0.0", package = "crypto-bigint" }
+tiny-keccak-patched = { git = "https://github.com/sp1-patches/tiny-keccak", tag = "patch-2.0.2-monerochan-4.0.0", package = "tiny-keccak", features = ["keccak"] }
+curve25519-dalek-patched = { git = "https://github.com/sp1-patches/curve25519-dalek", tag = "patch-4.1.3-monerochan-5.0.0", package = "curve25519-dalek" }
+curve25519-dalek-ng-patched = { git = "https://github.com/sp1-patches/curve25519-dalek-ng", tag = "patch-4.1.1-monerochan-5.0.0", package = "curve25519-dalek-ng" }
+ecdsa-core-patched = { git = "https://github.com/sp1-patches/signatures", package = "ecdsa", tag = "patch-16.9-monerochan-4.1.0" }
+secp256k1-patched = { git = "https://github.com/sp1-patches/rust-secp256k1", tag = "patch-0.29.1-monerochan-5.0.0", package = "secp256k1" }
+substrate-bn-patched = { git = "https://github.com/sp1-patches/bn", tag = "patch-0.6.0-monerochan-5.0.0", package = "substrate-bn" }
+bls12_381-patched = { git = "https://github.com/sp1-patches/bls12_381", tag = "patch-0.8.0-monerochan-5.0.0", features = ["groups"], package = "bls12_381"  }
+rsa-patched = { git = "https://github.com/sp1-patches/RustCrypto-RSA/", tag = "patch-0.9.6-monerochan-5.0.0", package = "rsa" }
+
+[patch.crates-io]
+monerochan-lib = { path = "../crates/zkvm/lib" }

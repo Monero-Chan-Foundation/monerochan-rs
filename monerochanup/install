@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+# Reference: https://github.com/foundry-rs/foundry/blob/master/foundryup/install
+
+set -e
+
+echo "🚀 Installing monerochanup..." && echo 
+
+BASE_DIR=$HOME
+MONEROCHAN_DIR=${MONEROCHAN_DIR-"$BASE_DIR/.monerochan"}
+MONEROCHAN_BIN_DIR="$MONEROCHAN_DIR/bin"
+
+BIN_URL="https://raw.githubusercontent.com/monero-chan-foundation/monerochan-rs/main/monerochanup/monerochanup"
+BIN_PATH="$MONEROCHAN_BIN_DIR/monerochanup"
+
+# Create the .monerochan bin directory and monerochanup binary if it doesn't exist.
+mkdir -p $MONEROCHAN_BIN_DIR
+curl -# -L $BIN_URL -o $BIN_PATH
+chmod +x $BIN_PATH
+
+# Store the correct profile file (i.e. .profile for bash or .zshenv for ZSH).
+case $SHELL in
+*/zsh)
+    PROFILE=${ZDOTDIR-"$HOME"}/.zshenv
+    PREF_SHELL=zsh
+    ;;
+*/bash)
+    PROFILE=$HOME/.bashrc
+    PREF_SHELL=bash
+    ;;
+*/fish)
+    PROFILE=$HOME/.config/fish/config.fish
+    PREF_SHELL=fish
+    ;;
+*/ash)
+    PROFILE=$HOME/.profile
+    PREF_SHELL=ash
+    ;;
+*)
+    echo "monerochanup: could not detect shell, manually add ${MONEROCHAN_BIN_DIR} to your PATH."
+    exit 1
+esac
+
+# Only add monerochanup if it isn't already in PATH.
+if [[ ":$PATH:" != *":${MONEROCHAN_BIN_DIR}:"* ]]; then
+    # Add the monerochanup directory to the path and ensure the old PATH variables remain.
+    echo >> $PROFILE && echo "export PATH=\"\$PATH:$MONEROCHAN_BIN_DIR\"" >> $PROFILE
+fi
+
+# Warn MacOS users that they may need to manually install libusb via Homebrew:
+if [[ "$OSTYPE" =~ ^darwin ]] && [[ ! -f /usr/local/opt/libusb/lib/libusb-1.0.0.dylib && ! -f /opt/homebrew/opt/libusb/lib/libusb-1.0.0.dylib ]]; then
+    echo && echo "warning: libusb not found. You may need to install it manually on MacOS via Homebrew (brew install libusb)."
+fi
+
+# Warn MacOS users that they may need to manually install openssl via Homebrew:
+if [[ "$OSTYPE" =~ ^darwin ]] && [[ ! -f /usr/local/opt/openssl/lib/libssl.3.dylib && ! -f /opt/homebrew/opt/openssl/lib/libssl.3.dylib ]]; then
+    echo && echo "warning: openssl not found. You may need to install it manually on MacOS via Homebrew (brew install openssl)."
+fi
+
+echo && echo "✅ Installation complete!"
+
+echo && echo "🔍 Detected shell: ${PREF_SHELL}"
+echo "🔗 Added monerochanup to PATH"
+
+echo && echo "To start using monerochanup, please run:"
+echo && echo "▶ source ${PROFILE}"
+echo "▶ monerochanup"
+
+echo && echo "🎉 Enjoy using monerochanup! For help, type 'monerochanup --help'"

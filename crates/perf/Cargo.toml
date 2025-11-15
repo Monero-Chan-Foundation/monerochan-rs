@@ -1,0 +1,41 @@
+[package]
+name = "monerochan-perf"
+description = "A performance evaluation tool for MONEROCHAN programs."
+readme = "../../README.md"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+default-run = "monerochan-perf"
+publish = false
+
+[dependencies]
+monerochan-prover = { workspace = true }
+monerochan-core-executor = { workspace = true }
+monerochan-core-machine = { workspace = true, default-features = true }
+monerochan = { workspace = true }
+p3-baby-bear = { workspace = true }
+monerochan-stark = { workspace = true }
+monerochan-cuda = { workspace = true }
+test-artifacts = { workspace = true }
+tracing = { workspace = true }
+serde_json = { workspace = true }
+rand = "0.8.5"
+clap = { version = "4.5.9", features = ["derive"] }
+bincode = "1.3.3"
+time = "0.3.26"
+
+[[bin]]
+name = "monerochan-perf"
+path = "src/main.rs"
+
+[[bin]]
+name = "monerochan-perf-executor"
+path = "src/executor.rs"
+
+[features]
+bigint-rug = ["monerochan-core-executor/bigint-rug"]
+native-gnark = ["monerochan/native-gnark"]
+network = ["monerochan/network"]

@@ -1,0 +1,12 @@
+[package]
+name = "io-script"
+version = { workspace = true }
+edition = { workspace = true }
+publish = false
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+monerochan = { workspace = true }
+
+[build-dependencies]
+monerochan-build = { workspace = true }

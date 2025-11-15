@@ -1,0 +1,500 @@
+use std::{
+    collections::HashMap,
+    error::Error as StdError,
+    future::Future,
+    process::{Command, Stdio},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+    time::{Duration, Instant},
+};
+
+use crate::proto::api::ProverServiceClient;
+use async_trait::async_trait;
+use proto::api::ReadyRequest;
+use reqwest::{Request, Response};
+use serde::{Deserialize, Serialize};
+use monerochan_core_machine::{io::MONEROCHANStdin, reduce::MONEROCHANReduceProof, utils::MONEROCHANCoreProverError};
+use monerochan_prover::{
+    InnerSC, OuterSC, MONEROCHANCoreProof, MONEROCHANProvingKey, MONEROCHANRecursionProverError, MONEROCHANVerifyingKey,
+};
+use std::sync::LazyLock;
+use tokio::task::block_in_place;
+use twirp::{
+    async_trait,
+    reqwest::{self},
+    url::Url,
+    Client, ClientError, Middleware, Next,
+};
+
+#[rustfmt::skip]
+pub mod proto {
+    pub mod api;
+}
+
+static MOONGATE_CONTAINERS: LazyLock<Mutex<HashMap<String, Arc<AtomicBool>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// A remote client to [monerochan_prover::MONEROCHANProver] that runs inside a container.
+///
+/// This is currently used to provide experimental support for GPU hardware acceleration.
+///
+/// **WARNING**: This is an experimental feature and may not work as expected.
+pub struct MONEROCHANCudaProver {
+    /// The gRPC client to communicate with the container.
+    client: Client,
+    /// The Moongate server container, if managed by the prover.
+    managed_container: Option<CudaProverContainer>,
+}
+
+pub struct CudaProverContainer {
+    /// The name of the container.
+    name: String,
+    /// A flag to indicate whether the container has already been cleaned up.
+    cleaned_up: Arc<AtomicBool>,
+}
+
+/// The payload for the [monerochan_prover::MONEROCHANProver::setup] method.
+///
+/// This object is used to serialize and deserialize the payloads for the Moongate server.
+#[derive(Serialize, Deserialize)]
+pub struct SetupRequestPayload {
+    pub elf: Vec<u8>,
+}
+
+/// The payload for the [monerochan_prover::MONEROCHANProver::setup] method response.
+///
+/// We use this object to serialize and deserialize the payload from the server to the client.
+#[derive(Serialize, Deserialize)]
+pub struct SetupResponsePayload {
+    pub pk: MONEROCHANProvingKey,
+    pub vk: MONEROCHANVerifyingKey,
+}
+
+/// The payload for the [monerochan_prover::MONEROCHANProver::prove_core] method.
+///
+/// This object is used to serialize and deserialize the payloads for the Moongate server.
+#[derive(Serialize, Deserialize)]
+pub struct ProveCoreRequestPayload {
+    /// The input stream.
+    pub stdin: MONEROCHANStdin,
+}
+
+/// The payload for the [monerochan_prover::MONEROCHANProver::stateless_prove_core] method.
+///
+/// This object is used to serialize and deserialize the payloads for the Moongate server.
+/// The proving key is sent in the payload with the request to allow the Moongate server to generate
+/// proofs without re-generating the proving key.
+#[derive(Serialize, Deserialize)]
+pub struct StatelessProveCoreRequestPayload {
+    /// The input stream.
+    pub stdin: MONEROCHANStdin,
+    /// The proving key.
+    pub pk: MONEROCHANProvingKey,
+}
+
+/// The payload for the [monerochan_prover::MONEROCHANProver::compress] method.
+///
+/// This object is used to serialize and deserialize the payloads for the Moongate server.
+#[derive(Serialize, Deserialize)]
+pub struct CompressRequestPayload {
+    /// The verifying key.
+    pub vk: MONEROCHANVerifyingKey,
+    /// The core proof.
+    pub proof: MONEROCHANCoreProof,
+    /// The deferred proofs.
+    pub deferred_proofs: Vec<MONEROCHANReduceProof<InnerSC>>,
+}
+
+/// The payload for the [monerochan_prover::MONEROCHANProver::shrink] method.
+///
+/// This object is used to serialize and deserialize the payloads for the Moongate server.
+#[derive(Serialize, Deserialize)]
+pub struct ShrinkRequestPayload {
+    pub reduced_proof: MONEROCHANReduceProof<InnerSC>,
+}
+
+/// The payload for the [monerochan_prover::MONEROCHANProver::wrap_bn254] method.
+///
+/// This object is used to serialize and deserialize the payloads for the Moongate server.
+#[derive(Serialize, Deserialize)]
+pub struct WrapRequestPayload {
+    pub reduced_proof: MONEROCHANReduceProof<InnerSC>,
+}
+
+/// Defines how the Moongate server is created.
+#[derive(Debug)]
+pub enum MoongateServer {
+    External { endpoint: String },
+    Local { visible_device_index: Option<u64>, port: Option<u64> },
+}
+
+impl Default for MoongateServer {
+    fn default() -> Self {
+        Self::Local { visible_device_index: None, port: None }
+    }
+}
+
+impl MONEROCHANCudaProver {
+    /// Creates a new [MONEROCHANCudaProver] that can be used to communicate with the Moongate server at
+    /// `moongate_endpoint`, or if not provided, create one that runs inside a Docker container.
+    pub fn new(moongate_server: MoongateServer) -> Result<Self, Box<dyn StdError>> {
+        let reqwest_middlewares = vec![Box::new(LoggingMiddleware) as Box<dyn Middleware>];
+
+        let prover = match moongate_server {
+            MoongateServer::External { endpoint } => {
+                let client = Client::new(
+                    Url::parse(&endpoint).expect("failed to parse url"),
+                    reqwest::Client::new(),
+                    reqwest_middlewares,
+                )
+                .expect("failed to create client");
+
+                MONEROCHANCudaProver { client, managed_container: None }
+            }
+            MoongateServer::Local { visible_device_index, port } => {
+                Self::start_moongate_server(reqwest_middlewares, visible_device_index, port)?
+            }
+        };
+
+        let timeout = Duration::from_secs(300);
+        let start_time = Instant::now();
+
+        block_on(async {
+            tracing::info!("waiting for proving server to be ready");
+            loop {
+                if start_time.elapsed() > timeout {
+                    return Err("Timeout: proving server did not become ready within 60 seconds. Please check your Docker container and network settings.".to_string());
+                }
+
+                let request = ReadyRequest {};
+                match prover.client.ready(request).await {
+                    Ok(response) if response.ready => {
+                        tracing::info!("proving server is ready");
+                        break;
+                    }
+                    Ok(_) => {
+                        tracing::info!("proving server is not ready, retrying...");
+                    }
+                    Err(e) => {
+                        tracing::warn!("Error checking server readiness: {}", e);
+                    }
+                }
+                tokio::time::sleep(Duration::from_secs(2)).await;
+            }
+            Ok(())
+        })?;
+
+        Ok(prover)
+    }
+
+    fn check_docker_availability() -> Result<bool, Box<dyn std::error::Error>> {
+        match Command::new("docker").arg("version").output() {
+            Ok(output) => Ok(output.status.success()),
+            Err(_) => Ok(false),
+        }
+    }
+
+    fn start_moongate_server(
+        reqwest_middlewares: Vec<Box<dyn Middleware>>,
+        visible_device_index: Option<u64>,
+        port: Option<u64>,
+    ) -> Result<MONEROCHANCudaProver, Box<dyn StdError>> {
+        // If the moongate endpoint url hasn't been provided, we start the Docker container
+        let container_name = port.map(|p| format!("monerochan-gpu-{p}")).unwrap_or("monerochan-gpu".to_string());
+        let image_name = std::env::var("MONEROCHAN_GPU_IMAGE")
+            .unwrap_or_else(|_| "public.ecr.aws/succinct-labs/moongate:v5.0.8".to_string());
+
+        let cleaned_up = Arc::new(AtomicBool::new(false));
+        let port = port.unwrap_or(3000);
+        let gpus = visible_device_index.map(|i| format!("device={i}")).unwrap_or("all".to_string());
+
+        // Check if Docker is available and the user has necessary permissions
+        if !Self::check_docker_availability()? {
+            return Err("Docker is not available or you don't have the necessary permissions. Please ensure Docker is installed and you are part of the docker group.".into());
+        }
+
+        // Pull the docker image if it's not present
+        if let Err(e) = Command::new("docker").args(["pull", &image_name]).output() {
+            return Err(format!("Failed to pull Docker image: {e}. Please check your internet connection and Docker permissions.").into());
+        }
+
+        // Start the docker container
+        let rust_log_level = std::env::var("RUST_LOG").unwrap_or_else(|_| "none".to_string());
+        Command::new("docker")
+            .args([
+                "run",
+                "-e",
+                &format!("RUST_LOG={rust_log_level}"),
+                "-p",
+                &format!("{port}:3000"),
+                "--rm",
+                "--gpus",
+                &gpus,
+                "--name",
+                &container_name,
+                &image_name,
+            ])
+            // Redirect stdout and stderr to the parent process
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .map_err(|e| format!("Failed to start Docker container: {e}. Please check your Docker installation and permissions."))?;
+
+        MOONGATE_CONTAINERS.lock()?.insert(container_name.clone(), cleaned_up.clone());
+
+        // Kill the container on control-c
+        // The error returned by set_handler is ignored to avoid panic when the handler has already
+        // been set.
+        let _ = ctrlc::set_handler(move || {
+            tracing::info!("received Ctrl+C, cleaning up...");
+
+            for (container_name, cleanup_flag) in MOONGATE_CONTAINERS.lock().unwrap().iter() {
+                if !cleanup_flag.load(Ordering::SeqCst) {
+                    cleanup_container(container_name);
+                    cleanup_flag.store(true, Ordering::SeqCst);
+                }
+            }
+            std::process::exit(0);
+        });
+
+        // Wait a few seconds for the container to start
+        std::thread::sleep(Duration::from_secs(2));
+
+        let client = Client::new(
+            Url::parse(&format!("http://localhost:{port}/twirp/")).expect("failed to parse url"),
+            reqwest::Client::new(),
+            reqwest_middlewares,
+        )
+        .expect("failed to create client");
+
+        Ok(MONEROCHANCudaProver {
+            client,
+            managed_container: Some(CudaProverContainer { name: container_name, cleaned_up }),
+        })
+    }
+
+    /// Executes the [monerochan_prover::MONEROCHANProver::setup] method inside the container.
+    pub fn setup(&self, elf: &[u8]) -> Result<(MONEROCHANProvingKey, MONEROCHANVerifyingKey), Box<dyn StdError>> {
+        let payload = SetupRequestPayload { elf: elf.to_vec() };
+        let request =
+            crate::proto::api::SetupRequest { data: bincode::serialize(&payload).unwrap() };
+        let response = block_on(async { self.client.setup(request).await }).unwrap();
+        let payload: SetupResponsePayload = bincode::deserialize(&response.result).unwrap();
+        Ok((payload.pk, payload.vk))
+    }
+
+    /// Executes the [monerochan_prover::MONEROCHANProver::prove_core] method inside the container.
+    ///
+    /// You will need at least 24GB of VRAM to run this method.
+    pub fn prove_core(&self, stdin: &MONEROCHANStdin) -> Result<MONEROCHANCoreProof, MONEROCHANCoreProverError> {
+        let payload = ProveCoreRequestPayload { stdin: stdin.clone() };
+        let request =
+            crate::proto::api::ProveCoreRequest { data: bincode::serialize(&payload).unwrap() };
+        let response = block_on(async { self.client.prove_core(request).await }).unwrap();
+        let proof: MONEROCHANCoreProof = bincode::deserialize(&response.result).unwrap();
+        Ok(proof)
+    }
+
+    /// Executes the [monerochan_prover::MONEROCHANProver::prove_core] method inside the container.
+    ///
+    /// You will need at least 24GB of VRAM to run this method.
+    pub fn prove_core_stateless(
+        &self,
+        pk: &MONEROCHANProvingKey,
+        stdin: &MONEROCHANStdin,
+    ) -> Result<MONEROCHANCoreProof, MONEROCHANCoreProverError> {
+        let payload = StatelessProveCoreRequestPayload { pk: pk.clone(), stdin: stdin.clone() };
+        let request =
+            crate::proto::api::ProveCoreRequest { data: bincode::serialize(&payload).unwrap() };
+        let response = block_on(async { self.client.prove_core_stateless(request).await }).unwrap();
+        let proof: MONEROCHANCoreProof = bincode::deserialize(&response.result).unwrap();
+        Ok(proof)
+    }
+
+    /// Executes the [monerochan_prover::MONEROCHANProver::compress] method inside the container.
+    ///
+    /// You will need at least 24GB of VRAM to run this method.
+    pub fn compress(
+        &self,
+        vk: &MONEROCHANVerifyingKey,
+        proof: MONEROCHANCoreProof,
+        deferred_proofs: Vec<MONEROCHANReduceProof<InnerSC>>,
+    ) -> Result<MONEROCHANReduceProof<InnerSC>, MONEROCHANRecursionProverError> {
+        let payload = CompressRequestPayload { vk: vk.clone(), proof, deferred_proofs };
+        let request =
+            crate::proto::api::CompressRequest { data: bincode::serialize(&payload).unwrap() };
+
+        let response = block_on(async { self.client.compress(request).await }).unwrap();
+        let proof: MONEROCHANReduceProof<InnerSC> = bincode::deserialize(&response.result).unwrap();
+        Ok(proof)
+    }
+
+    /// Executes the [monerochan_prover::MONEROCHANProver::shrink] method inside the container.
+    ///
+    /// You will need at least 24GB of VRAM to run this method.
+    pub fn shrink(
+        &self,
+        reduced_proof: MONEROCHANReduceProof<InnerSC>,
+    ) -> Result<MONEROCHANReduceProof<InnerSC>, MONEROCHANRecursionProverError> {
+        let payload = ShrinkRequestPayload { reduced_proof: reduced_proof.clone() };
+        let request =
+            crate::proto::api::ShrinkRequest { data: bincode::serialize(&payload).unwrap() };
+
+        let response = block_on(async { self.client.shrink(request).await }).unwrap();
+        let proof: MONEROCHANReduceProof<InnerSC> = bincode::deserialize(&response.result).unwrap();
+        Ok(proof)
+    }
+
+    /// Executes the [monerochan_prover::MONEROCHANProver::wrap_bn254] method inside the container.
+    ///
+    /// You will need at least 24GB of VRAM to run this method.
+    pub fn wrap_bn254(
+        &self,
+        reduced_proof: MONEROCHANReduceProof<InnerSC>,
+    ) -> Result<MONEROCHANReduceProof<OuterSC>, MONEROCHANRecursionProverError> {
+        let payload = WrapRequestPayload { reduced_proof: reduced_proof.clone() };
+        let request =
+            crate::proto::api::WrapRequest { data: bincode::serialize(&payload).unwrap() };
+
+        let response = block_on(async { self.client.wrap(request).await }).unwrap();
+        let proof: MONEROCHANReduceProof<OuterSC> = bincode::deserialize(&response.result).unwrap();
+        Ok(proof)
+    }
+}
+
+impl Default for MONEROCHANCudaProver {
+    fn default() -> Self {
+        Self::new(Default::default()).expect("Failed to create MONEROCHANCudaProver")
+    }
+}
+
+impl Drop for MONEROCHANCudaProver {
+    fn drop(&mut self) {
+        if let Some(container) = &self.managed_container {
+            if !container.cleaned_up.load(Ordering::SeqCst) {
+                tracing::debug!("dropping MONEROCHANProverClient, cleaning up...");
+                cleanup_container(&container.name);
+                container.cleaned_up.store(true, Ordering::SeqCst);
+            }
+        }
+    }
+}
+
+/// Cleans up the a docker container with the given name.
+fn cleanup_container(container_name: &str) {
+    if let Err(e) = Command::new("docker").args(["rm", "-f", container_name]).output() {
+        eprintln!(
+            "Failed to remove container: {e}. You may need to manually remove it using 'docker rm -f {container_name}'"
+        );
+    }
+}
+
+/// Utility method for blocking on an async function.
+///
+/// If we're already in a tokio runtime, we'll block in place. Otherwise, we'll create a new
+/// runtime.
+pub fn block_on<T>(fut: impl Future<Output = T>) -> T {
+    // Handle case if we're already in an tokio runtime.
+    if let Ok(handle) = tokio::runtime::Handle::try_current() {
+        block_in_place(|| handle.block_on(fut))
+    } else {
+        // Otherwise create a new runtime.
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create a new runtime");
+        rt.block_on(fut)
+    }
+}
+
+struct LoggingMiddleware;
+
+pub type Result<T, E = ClientError> = std::result::Result<T, E>;
+
+#[async_trait]
+impl Middleware for LoggingMiddleware {
+    async fn handle(&self, req: Request, next: Next<'_>) -> Result<Response> {
+        let response = next.run(req).await;
+        match response {
+            Ok(response) => {
+                tracing::info!("{:?}", response);
+                Ok(response)
+            }
+            Err(e) => Err(e),
+        }
+    }
+}
+
+// #[cfg(feature = "protobuf")]
+// #[cfg(test)]
+// mod tests {
+//     use monerochan_core_machine::{
+//         reduce::MONEROCHANReduceProof,
+//         utils::{setup_logger, tests::FIBONACCI_ELF},
+//     };
+//     use monerochan_prover::{components::DefaultProverComponents, InnerSC, MONEROCHANCoreProof, MONEROCHANProver};
+//     use twirp::{url::Url, Client};
+
+//     use crate::{
+//         proto::api::ProverServiceClient, CompressRequestPayload, ProveCoreRequestPayload,
+//         MONEROCHANCudaProver, MONEROCHANStdin,
+//     };
+
+//     #[test]
+//     fn test_client() {
+//         setup_logger();
+
+//         let prover = MONEROCHANProver::<DefaultProverComponents>::new();
+//         let client = MONEROCHANCudaProver::new().expect("Failed to create MONEROCHANCudaProver");
+//         let (pk, vk) = prover.setup(FIBONACCI_ELF);
+
+//         println!("proving core");
+//         let proof = client.prove_core(&pk, &MONEROCHANStdin::new()).unwrap();
+
+//         println!("verifying core");
+//         prover.verify(&proof.proof, &vk).unwrap();
+
+//         println!("proving compress");
+//         let proof = client.compress(&vk, proof, vec![]).unwrap();
+
+//         println!("verifying compress");
+//         prover.verify_compressed(&proof, &vk).unwrap();
+
+//         println!("proving shrink");
+//         let proof = client.shrink(proof).unwrap();
+
+//         println!("verifying shrink");
+//         prover.verify_shrink(&proof, &vk).unwrap();
+
+//         println!("proving wrap_bn254");
+//         let proof = client.wrap_bn254(proof).unwrap();
+
+//         println!("verifying wrap_bn254");
+//         prover.verify_wrap_bn254(&proof, &vk).unwrap();
+//     }
+
+//     #[tokio::test]
+//     async fn test_prove_core() {
+//         let client =
+//             Client::from_base_url(Url::parse("http://localhost:3000/twirp/").unwrap()).unwrap();
+
+//         let prover = MONEROCHANProver::<DefaultProverComponents>::new();
+//         let (pk, vk) = prover.setup(FIBONACCI_ELF);
+//         let payload = ProveCoreRequestPayload { pk, stdin: MONEROCHANStdin::new() };
+//         let request =
+//             crate::proto::api::ProveCoreRequest { data: bincode::serialize(&payload).unwrap() };
+//         let proof = client.prove_core(request).await.unwrap();
+//         let proof: MONEROCHANCoreProof = bincode::deserialize(&proof.result).unwrap();
+//         prover.verify(&proof.proof, &vk).unwrap();
+
+//         tracing::info!("compress");
+//         let payload = CompressRequestPayload { vk: vk.clone(), proof, deferred_proofs: vec![] };
+//         let request =
+//             crate::proto::api::CompressRequest { data: bincode::serialize(&payload).unwrap() };
+//         let compressed_proof = client.compress(request).await.unwrap();
+//         let compressed_proof: MONEROCHANReduceProof<InnerSC> =
+//             bincode::deserialize(&compressed_proof.result).unwrap();
+
+//         tracing::info!("verify compressed");
+//         prover.verify_compressed(&compressed_proof, &vk).unwrap();
+//     }
+// }

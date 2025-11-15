@@ -1,0 +1,9 @@
+[package]
+name = "groth16-verifier-program"
+version = "1.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+monerochan-runtime = { path = "../../../crates/zkvm/entrypoint" }
+monerochan-verifier =  { path = "../../../crates/verifier" }

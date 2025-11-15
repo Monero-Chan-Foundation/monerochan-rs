@@ -1,0 +1,263 @@
+use std::{fs::File, path::Path};
+
+use anyhow::Result;
+use clap::ValueEnum;
+use p3_baby_bear::BabyBear;
+use p3_bn254_fr::Bn254Fr;
+use p3_commit::{Pcs, TwoAdicMultiplicativeCoset};
+use p3_field::{AbstractField, PrimeField, PrimeField32, TwoAdicField};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use monerochan_core_machine::{io::MONEROCHANStdin, reduce::MONEROCHANReduceProof};
+use monerochan_primitives::{io::MONEROCHANPublicValues, poseidon2_hash};
+
+use monerochan_recursion_circuit::machine::{
+    MONEROCHANCompressWitnessValues, MONEROCHANDeferredWitnessValues, MONEROCHANRecursionWitnessValues,
+};
+
+use monerochan_recursion_gnark_ffi::proof::{Groth16Bn254Proof, PlonkBn254Proof};
+
+use monerochan_stark::{ShardProof, StarkGenericConfig, StarkProvingKey, StarkVerifyingKey, DIGEST_SIZE};
+use thiserror::Error;
+
+use crate::{
+    utils::{babybears_to_bn254, words_to_bytes_be},
+    CoreSC, InnerSC,
+};
+
+/// The information necessary to generate a proof for a given RISC-V program.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MONEROCHANProvingKey {
+    pub pk: StarkProvingKey<CoreSC>,
+    pub elf: Vec<u8>,
+    /// Verifying key is also included as we need it for recursion
+    pub vk: MONEROCHANVerifyingKey,
+}
+
+/// The information necessary to verify a proof for a given RISC-V program.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MONEROCHANVerifyingKey {
+    pub vk: StarkVerifyingKey<CoreSC>,
+}
+
+/// A trait for keys that can be hashed into a digest.
+pub trait HashableKey {
+    /// Hash the key into a digest of BabyBear elements.
+    fn hash_babybear(&self) -> [BabyBear; DIGEST_SIZE];
+
+    /// Hash the key into a digest of u32 elements.
+    fn hash_u32(&self) -> [u32; DIGEST_SIZE];
+
+    /// Hash the key into a Bn254Fr element.
+    fn hash_bn254(&self) -> Bn254Fr {
+        babybears_to_bn254(&self.hash_babybear())
+    }
+
+    /// Hash the key into a 32 byte hex string, prefixed with "0x".
+    ///
+    /// This is ideal for generating a vkey hash for onchain verification.
+    fn bytes32(&self) -> String {
+        let vkey_digest_bn254 = self.hash_bn254();
+        format!("0x{:0>64}", vkey_digest_bn254.as_canonical_biguint().to_str_radix(16))
+    }
+
+    /// Hash the key into a 32 byte array.
+    ///
+    /// This has the same value as `bytes32`, but as a raw byte array.
+    fn bytes32_raw(&self) -> [u8; 32] {
+        let vkey_digest_bn254 = self.hash_bn254();
+        let vkey_bytes = vkey_digest_bn254.as_canonical_biguint().to_bytes_be();
+        let mut result = [0u8; 32];
+        result[1..].copy_from_slice(&vkey_bytes);
+        result
+    }
+
+    /// Hash the key into a digest of bytes elements.
+    fn hash_bytes(&self) -> [u8; DIGEST_SIZE * 4] {
+        words_to_bytes_be(&self.hash_u32())
+    }
+}
+
+impl HashableKey for MONEROCHANVerifyingKey {
+    fn hash_babybear(&self) -> [BabyBear; DIGEST_SIZE] {
+        self.vk.hash_babybear()
+    }
+
+    fn hash_u32(&self) -> [u32; DIGEST_SIZE] {
+        self.vk.hash_u32()
+    }
+}
+
+impl<SC: StarkGenericConfig<Val = BabyBear, Domain = TwoAdicMultiplicativeCoset<BabyBear>>>
+    HashableKey for StarkVerifyingKey<SC>
+where
+    <SC::Pcs as Pcs<SC::Challenge, SC::Challenger>>::Commitment: AsRef<[BabyBear; DIGEST_SIZE]>,
+{
+    fn hash_babybear(&self) -> [BabyBear; DIGEST_SIZE] {
+        let mut num_inputs = DIGEST_SIZE + 1 + 14 + (7 * self.chip_information.len());
+        for (name, _, _) in self.chip_information.iter() {
+            num_inputs += name.len();
+        }
+        let mut inputs = Vec::with_capacity(num_inputs);
+        inputs.extend(self.commit.as_ref());
+        inputs.push(self.pc_start);
+        inputs.extend(self.initial_global_cumulative_sum.0.x.0);
+        inputs.extend(self.initial_global_cumulative_sum.0.y.0);
+        for (name, domain, dimension) in self.chip_information.iter() {
+            inputs.push(BabyBear::from_canonical_usize(domain.log_n));
+            let size = 1 << domain.log_n;
+            inputs.push(BabyBear::from_canonical_usize(size));
+            let g = BabyBear::two_adic_generator(domain.log_n);
+            inputs.push(domain.shift);
+            inputs.push(g);
+            inputs.push(BabyBear::from_canonical_usize(dimension.width));
+            inputs.push(BabyBear::from_canonical_usize(dimension.height));
+            inputs.push(BabyBear::from_canonical_usize(name.len()));
+            for byte in name.as_bytes() {
+                inputs.push(BabyBear::from_canonical_u8(*byte));
+            }
+        }
+
+        poseidon2_hash(inputs)
+    }
+
+    fn hash_u32(&self) -> [u32; 8] {
+        self.hash_babybear()
+            .into_iter()
+            .map(|n| n.as_canonical_u32())
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap()
+    }
+}
+
+/// A proof of a RISCV ELF execution with given inputs and outputs.
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(bound(serialize = "P: Serialize"))]
+#[serde(bound(deserialize = "P: DeserializeOwned"))]
+pub struct MONEROCHANProofWithMetadata<P: Clone> {
+    pub proof: P,
+    pub stdin: MONEROCHANStdin,
+    pub public_values: MONEROCHANPublicValues,
+    pub cycles: u64,
+}
+
+impl<P: Serialize + DeserializeOwned + Clone> MONEROCHANProofWithMetadata<P> {
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
+        bincode::serialize_into(File::create(path).expect("failed to open file"), self)
+            .map_err(Into::into)
+    }
+
+    pub fn load(path: impl AsRef<Path>) -> Result<Self> {
+        bincode::deserialize_from(File::open(path).expect("failed to open file"))
+            .map_err(Into::into)
+    }
+}
+
+impl<P: std::fmt::Debug + Clone> std::fmt::Debug for MONEROCHANProofWithMetadata<P> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MONEROCHANProofWithMetadata").field("proof", &self.proof).finish()
+    }
+}
+
+/// A proof of an MONEROCHAN program without any wrapping.
+pub type MONEROCHANCoreProof = MONEROCHANProofWithMetadata<MONEROCHANCoreProofData>;
+
+/// An MONEROCHAN proof that has been recursively reduced into a single proof. This proof can be verified
+/// within MONEROCHAN programs.
+pub type MONEROCHANReducedProof = MONEROCHANProofWithMetadata<MONEROCHANReducedProofData>;
+
+/// An MONEROCHAN proof that has been wrapped into a single PLONK proof and can be verified onchain.
+pub type MONEROCHANPlonkBn254Proof = MONEROCHANProofWithMetadata<MONEROCHANPlonkBn254ProofData>;
+
+/// An MONEROCHAN proof that has been wrapped into a single Groth16 proof and can be verified onchain.
+pub type MONEROCHANGroth16Bn254Proof = MONEROCHANProofWithMetadata<MONEROCHANGroth16Bn254ProofData>;
+
+/// An MONEROCHAN proof that has been wrapped into a single proof and can be verified onchain.
+pub type MONEROCHANProof = MONEROCHANProofWithMetadata<MONEROCHANBn254ProofData>;
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct MONEROCHANCoreProofData(pub Vec<ShardProof<CoreSC>>);
+
+impl MONEROCHANCoreProofData {
+    pub fn save(&self, path: &str) -> Result<(), std::io::Error> {
+        let data = serde_json::to_string(self).unwrap();
+        std::fs::write(path, data).unwrap();
+        Ok(())
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct MONEROCHANReducedProofData(pub ShardProof<InnerSC>);
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct MONEROCHANPlonkBn254ProofData(pub PlonkBn254Proof);
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct MONEROCHANGroth16Bn254ProofData(pub Groth16Bn254Proof);
+
+#[derive(Serialize, Deserialize, Clone)]
+pub enum MONEROCHANBn254ProofData {
+    Plonk(PlonkBn254Proof),
+    Groth16(Groth16Bn254Proof),
+}
+
+impl MONEROCHANBn254ProofData {
+    pub fn get_proof_system(&self) -> ProofSystem {
+        match self {
+            MONEROCHANBn254ProofData::Plonk(_) => ProofSystem::Plonk,
+            MONEROCHANBn254ProofData::Groth16(_) => ProofSystem::Groth16,
+        }
+    }
+
+    pub fn get_raw_proof(&self) -> &str {
+        match self {
+            MONEROCHANBn254ProofData::Plonk(proof) => &proof.raw_proof,
+            MONEROCHANBn254ProofData::Groth16(proof) => &proof.raw_proof,
+        }
+    }
+}
+
+/// The mode of the prover.
+#[derive(Debug, Default, Clone, ValueEnum, PartialEq, Eq)]
+pub enum ProverMode {
+    #[default]
+    Cpu,
+    Cuda,
+    Network,
+    Mock,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProofSystem {
+    Plonk,
+    Groth16,
+}
+
+impl ProofSystem {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ProofSystem::Plonk => "Plonk",
+            ProofSystem::Groth16 => "Groth16",
+        }
+    }
+}
+
+/// A proof that can be reduced along with other proofs into one proof.
+#[derive(Serialize, Deserialize, Clone)]
+pub enum MONEROCHANReduceProofWrapper {
+    Core(MONEROCHANReduceProof<CoreSC>),
+    Recursive(MONEROCHANReduceProof<InnerSC>),
+}
+
+#[derive(Error, Debug)]
+pub enum MONEROCHANRecursionProverError {
+    #[error("Runtime error: {0}")]
+    RuntimeError(String),
+}
+
+#[allow(clippy::large_enum_variant)]
+pub enum MONEROCHANCircuitWitness {
+    Core(MONEROCHANRecursionWitnessValues<CoreSC>),
+    Deferred(MONEROCHANDeferredWitnessValues<InnerSC>),
+    Compress(MONEROCHANCompressWitnessValues<InnerSC>),
+}

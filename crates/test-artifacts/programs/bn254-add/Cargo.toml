@@ -1,0 +1,11 @@
+[package]
+name = "bn254-add-test"
+version = "1.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+common-test-utils = { path = "../common" }
+monerochan-lib = { path = "../../../../crates/zkvm/lib" }
+monerochan-runtime = { path = "../../../../crates/zkvm/entrypoint" }
+monerochan-curves = { path = "../../../../crates/curves" }
