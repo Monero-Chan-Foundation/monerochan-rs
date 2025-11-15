@@ -52,6 +52,26 @@ MONEROCHAN.RS extends privacy from **value** to **computation**, forming the fou
 
 ## Getting Started
 
+1. **Install the CLI**:
+   ```sh
+   cargo install monerochan-cli
+   ```
+
+2. **Create an example project**:
+   ```sh
+   cargo monerochan new my-project
+   cd my-project
+   ```
+
+3. **Read the project README** for detailed instructions:
+   ```sh
+   cat README.md
+   ```
+
+The project template includes a complete example with instructions for executing programs and generating proofs.
+
+### Resources
+
 - **Example Template**: [monerochan-project-template](https://github.com/Monero-Chan-Foundation/monerochan-project-template) — Get started with a ready-to-use project template
 - **Published Crates**: [crates.io/users/monerochanorg](https://crates.io/users/monerochanorg) — View all published MONEROCHAN.RS crates
 
