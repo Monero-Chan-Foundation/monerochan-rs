@@ -14,10 +14,10 @@ fi
 # Crates in dependency order (dependencies first, then dependents)
 # Excludes: test-artifacts, perf (have publish = false)
 CRATES=(
-    # "crates/primitives"
-    # "crates/curves"
-    # "crates/derive"
-    # "crates/helper"
+    "crates/primitives"
+    "crates/curves"
+    "crates/derive"
+    "crates/helper"
     "crates/build"
     "crates/core/executor"
     "crates/core/machine"
