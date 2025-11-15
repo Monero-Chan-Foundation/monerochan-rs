@@ -32,7 +32,7 @@ use crate::network::proto::api::{
 use monerochan_prover::{
     components::CpuProverComponents, HashableKey, MONEROCHANProver,
 };
-use tonic::transport::{Channel, Endpoint};
+use tonic::transport::Channel;
 use tonic::Request;
 
 use crate::utils::block_on;
@@ -309,12 +309,12 @@ impl NetworkProver {
     }
 
     async fn client(&self) -> Result<NetworkClient<Channel>> {
-        let endpoint = Endpoint::from_shared(self.endpoint.clone())
-            .context("invalid network endpoint")?
+        // Use grpc::configure_endpoint which handles TLS automatically for HTTPS URLs
+        let channel = super::grpc::configure_endpoint(&self.endpoint)?
             .connect()
             .await
             .context("failed to connect to network")?;
-        Ok(NetworkClient::new(endpoint))
+        Ok(NetworkClient::new(channel))
     }
 
     /// Submit a proof request to the network.

@@ -1501,7 +1501,7 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
 name = "monerochan-curves"
-version = "5.2.8"
+version = "5.2.9"
 dependencies = [
  "cfg-if",
  "dashu",
@@ -1521,7 +1521,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-derive"
-version = "5.2.8"
+version = "5.2.9"
 dependencies = [
  "quote",
  "syn 1.0.109",
@@ -1529,7 +1529,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-lib"
-version = "5.2.8"
+version = "5.2.9"
 dependencies = [
  "bincode",
  "elliptic-curve",
@@ -1539,7 +1539,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-primitives"
-version = "5.2.8"
+version = "5.2.9"
 dependencies = [
  "bincode",
  "blake3",
@@ -1557,7 +1557,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-runtime"
-version = "5.2.8"
+version = "5.2.9"
 dependencies = [
  "cfg-if",
  "getrandom 0.2.16",
@@ -1574,7 +1574,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-stark"
-version = "5.2.8"
+version = "5.2.9"
 dependencies = [
  "arrayref",
  "hashbrown 0.14.5",

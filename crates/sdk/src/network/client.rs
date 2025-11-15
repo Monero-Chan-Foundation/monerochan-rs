@@ -257,7 +257,7 @@ impl NetworkClient {
                             StdOk(response) => {
                                 Ok(Some(GetProgramResponse::from(response.into_inner())))
                             }
-                            Err(status) if status.code() == Code::NotFound => Ok(None),
+                            Err(status) if status.code() == Code::NotFound || status.code() == Code::Unimplemented => Ok(None),
                             Err(e) => Err(e.into()),
                         }
                     },
@@ -276,7 +276,7 @@ impl NetworkClient {
                             StdOk(response) => {
                                 Ok(Some(GetProgramResponse::from(response.into_inner())))
                             }
-                            Err(status) if status.code() == Code::NotFound => Ok(None),
+                            Err(status) if status.code() == Code::NotFound || status.code() == Code::Unimplemented => Ok(None),
                             Err(e) => Err(e.into()),
                         }
                     },
