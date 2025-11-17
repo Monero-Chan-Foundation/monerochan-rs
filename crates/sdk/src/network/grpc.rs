@@ -16,7 +16,21 @@ pub fn configure_endpoint(addr: &str) -> Result<Endpoint, Error> {
 
     // Configure TLS if using HTTPS.
     if addr.starts_with("https://") {
-        let tls_config = ClientTlsConfig::new().with_enabled_roots();
+        // Extract domain name from URL for SNI (Server Name Indication)
+        // SNI is required for proper TLS certificate validation, even without Cloudflare
+        // Format: https://domain:port/path -> extract "domain:port" -> extract "domain"
+        let domain = addr
+            .strip_prefix("https://")
+            .and_then(|s| s.split('/').next())
+            .and_then(|s| s.split(':').next())
+            .unwrap_or("rpc.mainnet.monero-chan.org");
+        
+        // Configure TLS with system root certificates and domain name for SNI
+        // Domain name is required foar SNI which enables proper certificate validation
+        let tls_config = ClientTlsConfig::new()
+            .with_enabled_roots()
+            .domain_name(domain);
+        
         endpoint = endpoint.tls_config(tls_config)?;
     }
 

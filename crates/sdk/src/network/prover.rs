@@ -313,7 +313,7 @@ impl NetworkProver {
         let channel = super::grpc::configure_endpoint(&self.endpoint)?
             .connect()
             .await
-            .context("failed to connect to network")?;
+            .with_context(|| format!("failed to connect to network endpoint: {}", self.endpoint))?;
         Ok(NetworkClient::new(channel))
     }
 
@@ -345,7 +345,12 @@ impl NetworkProver {
         // Check for Solana private key from env var and create client auth if so
         #[cfg(feature = "network")]
         let (client_address, client_auth) = {
-            let private_key_bytes = std::env::var("MONEROCHAN_NETWORK_PRIVATE_KEY").ok().and_then(|solana_key_str| {
+            // Check MONEROCHAN_NETWORK_PRIVATE_KEY first, then fall back to BASE_PRIVATE_KEY
+            let private_key_str = std::env::var("MONEROCHAN_NETWORK_PRIVATE_KEY")
+                .ok()
+                .or_else(|| std::env::var("BASE_PRIVATE_KEY").ok());
+
+            let private_key_bytes = private_key_str.and_then(|solana_key_str| {
                 // Parse private key (support both hex and base58)
                 if solana_key_str.starts_with("0x") {
                     hex::decode(&solana_key_str[2..]).ok()
@@ -429,6 +434,37 @@ impl NetworkProver {
             .await
             .context("network status request failed")?;
         Ok(response.into_inner())
+    }
+
+    /// Wait until the network returns a completed proof or an error.
+    ///
+    /// # Details
+    /// This method polls the network until the proof request completes or times out.
+    /// The `request_id` should be obtained from a previous `request_async()` call.
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use monerochan::{network::NetworkMode, Prover, ProverClient, MONEROCHANStdin};
+    /// use alloy_primitives::B256;
+    ///
+    /// # tokio_test::block_on(async {
+    /// let elf = &[1, 2, 3];
+    /// let stdin = MONEROCHANStdin::new();
+    ///
+    /// let client = ProverClient::builder().network_for(NetworkMode::Reserved).build();
+    /// let (pk, vk) = client.setup(elf);
+    /// let request_id = client.prove(&pk, &stdin).request_async().await.unwrap();
+    /// let proof = client.wait_proof(request_id, None, None).await.unwrap();
+    /// # });
+    /// ```
+    pub async fn wait_proof(
+        &self,
+        request_id: B256,
+        timeout: Option<Duration>,
+        auction_timeout: Option<Duration>,
+    ) -> Result<MONEROCHANProofWithPublicValues> {
+        let request_id_str = format!("0x{}", hex::encode(request_id.as_slice()));
+        self.wait_for_proof(&request_id_str, timeout, auction_timeout).await
     }
 
     /// Wait until the network returns a completed proof or an error.
@@ -522,7 +558,12 @@ impl NetworkProver {
         // Check for Solana private key from env var and create client auth if so
         #[cfg(feature = "network")]
         let (client_address, client_auth) = {
-            let private_key_bytes = std::env::var("MONEROCHAN_NETWORK_PRIVATE_KEY").ok().and_then(|solana_key_str| {
+            // Check MONEROCHAN_NETWORK_PRIVATE_KEY first, then fall back to BASE_PRIVATE_KEY
+            let private_key_str = std::env::var("MONEROCHAN_NETWORK_PRIVATE_KEY")
+                .ok()
+                .or_else(|| std::env::var("BASE_PRIVATE_KEY").ok());
+
+            let private_key_bytes = private_key_str.and_then(|solana_key_str| {
                 // Parse private key (support both hex and base58)
                 if solana_key_str.starts_with("0x") {
                     hex::decode(&solana_key_str[2..]).ok()

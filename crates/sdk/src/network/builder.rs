@@ -5,7 +5,7 @@
 use alloy_primitives::Address;
 
 use crate::{
-    network::{NetworkMode, MAINNET_RPC_URL},
+    network::{NetworkMode, MAINNET_RPC_URL, utils::get_default_rpc_url_for_mode},
     NetworkProver,
 };
 
@@ -86,10 +86,19 @@ impl NetworkProverBuilder {
             }
         });
 
-        // Always use network API mode - default to mainnet
+        // Use the RPC URL based on network mode if not explicitly set
+        // Default to Mainnet RPC URL if network_mode is not specified (when it defaults to Reserved)
         let rpc_url = self.rpc_url
             .or_else(|| std::env::var("NETWORK_RPC_URL").ok().filter(|u| !u.is_empty()))
-            .unwrap_or_else(|| MAINNET_RPC_URL.to_string());
+            .unwrap_or_else(|| {
+                // If network_mode was explicitly set, use its default RPC URL
+                // Otherwise, default to Mainnet RPC URL for backward compatibility
+                if self.network_mode.is_some() {
+                    get_default_rpc_url_for_mode(network_mode)
+                } else {
+                    MAINNET_RPC_URL.to_string()
+                }
+            });
 
         NetworkProver::new(network_mode, rpc_url).with_tee_signers(tee_signers)
     }
