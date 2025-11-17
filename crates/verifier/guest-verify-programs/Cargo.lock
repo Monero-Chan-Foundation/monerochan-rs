@@ -325,7 +325,7 @@ checksum = "f9fbbcab51052fe104eb5e5d351cf728d30a5be1fe14d9be8a3b097481fb97de"
 
 [[package]]
 name = "monerochan-lib"
-version = "5.2.9"
+version = "5.2.12"
 dependencies = [
  "bincode",
  "monerochan-primitives",
@@ -334,7 +334,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-primitives"
-version = "5.2.9"
+version = "5.2.12"
 dependencies = [
  "bincode",
  "blake3",
@@ -352,7 +352,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-runtime"
-version = "5.2.9"
+version = "5.2.12"
 dependencies = [
  "blake3",
  "cfg-if",
@@ -368,7 +368,7 @@ dependencies = [
 
 [[package]]
 name = "monerochan-verifier"
-version = "5.2.9"
+version = "5.2.12"
 dependencies = [
  "blake3",
  "cfg-if",

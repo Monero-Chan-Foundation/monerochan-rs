@@ -68,7 +68,7 @@ impl std::str::FromStr for NetworkMode {
 pub(crate) const MAINNET_EXPLORER_URL: &str = "https://explorer.monero-chan.org";
 pub(crate) const MAINNET_RPC_URL: &str = "https://rpc.mainnet.monero-chan.org";
 pub(crate) const RESERVED_EXPLORER_URL: &str = "https://explorer.reserved.monero-chan.org";
-pub(crate) const RESERVED_RPC_URL: &str = "https://rpc.production.monero-chan.org";
+pub(crate) const RESERVED_RPC_URL: &str = "https://rpc.mainnet.monero-chan.org";
 
 // pub(crate) const PRIVATE_NETWORK_RPC_URL: &str = "https://rpc.private.monero-chan.org";
 // pub(crate) const PRIVATE_EXPLORER_URL: &str = "https://explorer-private.monero-chan.org";

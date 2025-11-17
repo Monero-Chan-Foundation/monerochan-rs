@@ -56,7 +56,7 @@ impl NetworkProver {
     /// ```rust,no_run
     /// use monerochan::{network::NetworkMode, NetworkProver};
     ///
-    /// let prover = NetworkProver::new(NetworkMode::Reserved, "https://rpc.production.monero-chan.org");
+    /// let prover = NetworkProver::new(NetworkMode::Reserved, "https://rpc.mainnet.monero-chan.org");
     /// ```
     #[must_use]
     pub fn new(
