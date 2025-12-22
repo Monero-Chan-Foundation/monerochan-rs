@@ -14,9 +14,11 @@ use subenum::subenum;
 /// These identifiers are for the various chips in the rv32im prover. We need them in the
 /// executor to compute the memory cost of the current shard of execution.
 ///
-/// The [`CoreAirId`]s are the AIRs that are not part of precompile shards and not the program or
-/// byte AIR.
-#[subenum(CoreAirId)]
+/// The subenums categorize the AIRs:
+/// - [`CoreAirId`]: AIRs that are not part of precompile shards and not the program or byte AIR.
+/// - [`MemoryAirId`]: AIRs related to memory operations (init, finalize, global).
+/// - [`PrecompileAirId`]: AIRs for cryptographic precompiles (SHA, Ed25519, secp256k1, etc.).
+#[subenum(CoreAirId, MemoryAirId, PrecompileAirId)]
 #[derive(
     Debug,
     Clone,
@@ -39,52 +41,76 @@ pub enum RiscvAirId {
     /// The program chip.
     Program = 1,
     /// The SHA-256 extend chip.
+    #[subenum(PrecompileAirId)]
     ShaExtend = 2,
     /// The SHA-256 compress chip.
+    #[subenum(PrecompileAirId)]
     ShaCompress = 3,
     /// The Edwards add assign chip.
+    #[subenum(PrecompileAirId)]
     EdAddAssign = 4,
     /// The Edwards decompress chip.
+    #[subenum(PrecompileAirId)]
     EdDecompress = 5,
     /// The secp256k1 decompress chip.
+    #[subenum(PrecompileAirId)]
     Secp256k1Decompress = 6,
     /// The secp256k1 add assign chip.
+    #[subenum(PrecompileAirId)]
     Secp256k1AddAssign = 7,
     /// The secp256k1 double assign chip.
+    #[subenum(PrecompileAirId)]
     Secp256k1DoubleAssign = 8,
     /// The secp256r1 decompress chip.
+    #[subenum(PrecompileAirId)]
     Secp256r1Decompress = 9,
     /// The secp256r1 add assign chip.
+    #[subenum(PrecompileAirId)]
     Secp256r1AddAssign = 10,
     /// The secp256r1 double assign chip.
+    #[subenum(PrecompileAirId)]
     Secp256r1DoubleAssign = 11,
     /// The Keccak permute chip.
+    #[subenum(PrecompileAirId)]
     KeccakPermute = 12,
     /// The bn254 add assign chip.
+    #[subenum(PrecompileAirId)]
     Bn254AddAssign = 13,
     /// The bn254 double assign chip.
+    #[subenum(PrecompileAirId)]
     Bn254DoubleAssign = 14,
     /// The bls12-381 add assign chip.
+    #[subenum(PrecompileAirId)]
     Bls12381AddAssign = 15,
     /// The bls12-381 double assign chip.
+    #[subenum(PrecompileAirId)]
     Bls12381DoubleAssign = 16,
     /// The uint256 mul mod chip.
+    #[subenum(PrecompileAirId)]
     Uint256MulMod = 17,
     /// The u256 xu2048 mul chip.
+    #[subenum(PrecompileAirId)]
     U256XU2048Mul = 18,
     /// The bls12-381 fp op assign chip.
+    #[subenum(PrecompileAirId)]
     Bls12381FpOpAssign = 19,
     /// The bls12-831 fp2 add sub assign chip.
+    #[subenum(PrecompileAirId)]
     Bls12381Fp2AddSubAssign = 20,
     /// The bls12-831 fp2 mul assign chip.
+    #[subenum(PrecompileAirId)]
     Bls12381Fp2MulAssign = 21,
     /// The bn254 fp2 add sub assign chip.
+    #[subenum(PrecompileAirId)]
     Bn254FpOpAssign = 22,
     /// The bn254 fp op assign chip.
+    #[subenum(PrecompileAirId)]
     Bn254Fp2AddSubAssign = 23,
     /// The bn254 fp2 mul assign chip.
+    #[subenum(PrecompileAirId)]
     Bn254Fp2MulAssign = 24,
     /// The bls12-381 decompress chip.
+    #[subenum(PrecompileAirId)]
     Bls12381Decompress = 25,
     /// The syscall core chip.
     #[subenum(CoreAirId)]
@@ -128,14 +154,16 @@ pub enum RiscvAirId {
     #[subenum(CoreAirId)]
     SyscallInstrs = 39,
     /// The memory global init chip.
+    #[subenum(MemoryAirId)]
     MemoryGlobalInit = 40,
     /// The memory global finalize chip.
+    #[subenum(MemoryAirId)]
     MemoryGlobalFinalize = 41,
     /// The memory local chip.
     #[subenum(CoreAirId)]
     MemoryLocal = 42,
     /// The global chip.
-    #[subenum(CoreAirId)]
+    #[subenum(CoreAirId, MemoryAirId)]
     Global = 43,
     /// The byte chip.
     Byte = 44,
@@ -165,7 +193,6 @@ impl RiscvAirId {
         ]
     }
 
-    /// TODO replace these three with subenums or something
     /// Whether the ID represents a core AIR.
     #[must_use]
     pub fn is_core(self) -> bool {
@@ -175,42 +202,13 @@ impl RiscvAirId {
     /// Whether the ID represents a memory AIR.
     #[must_use]
     pub fn is_memory(self) -> bool {
-        matches!(
-            self,
-            RiscvAirId::MemoryGlobalInit | RiscvAirId::MemoryGlobalFinalize | RiscvAirId::Global
-        )
+        MemoryAirId::try_from(self).is_ok()
     }
 
     /// Whether the ID represents a precompile AIR.
     #[must_use]
     pub fn is_precompile(self) -> bool {
-        matches!(
-            self,
-            RiscvAirId::ShaExtend |
-                RiscvAirId::ShaCompress |
-                RiscvAirId::EdAddAssign |
-                RiscvAirId::EdDecompress |
-                RiscvAirId::Secp256k1Decompress |
-                RiscvAirId::Secp256k1AddAssign |
-                RiscvAirId::Secp256k1DoubleAssign |
-                RiscvAirId::Secp256r1Decompress |
-                RiscvAirId::Secp256r1AddAssign |
-                RiscvAirId::Secp256r1DoubleAssign |
-                RiscvAirId::KeccakPermute |
-                RiscvAirId::Bn254AddAssign |
-                RiscvAirId::Bn254DoubleAssign |
-                RiscvAirId::Bls12381AddAssign |
-                RiscvAirId::Bls12381DoubleAssign |
-                RiscvAirId::Uint256MulMod |
-                RiscvAirId::U256XU2048Mul |
-                RiscvAirId::Bls12381FpOpAssign |
-                RiscvAirId::Bls12381Fp2AddSubAssign |
-                RiscvAirId::Bls12381Fp2MulAssign |
-                RiscvAirId::Bn254FpOpAssign |
-                RiscvAirId::Bn254Fp2AddSubAssign |
-                RiscvAirId::Bn254Fp2MulAssign |
-                RiscvAirId::Bls12381Decompress
-        )
+        PrecompileAirId::try_from(self).is_ok()
     }
 
     /// The number of rows in the AIR produced by each event.
